@@ -110,6 +110,7 @@ type commandModeOptions struct {
 	devinLogin         bool
 	metaLogin          bool
 	qoderLogin         bool
+	opencodeLogin      bool
 }
 
 func isOneShotCommandMode(opts commandModeOptions) bool {
@@ -139,7 +140,8 @@ func isOneShotCommandMode(opts commandModeOptions) bool {
 		opts.xaiLogin ||
 		opts.devinLogin ||
 		opts.metaLogin ||
-		opts.qoderLogin
+		opts.qoderLogin ||
+		opts.opencodeLogin
 }
 
 // main is the entry point of the application.
@@ -209,6 +211,7 @@ func main() {
 	var devinLogin bool
 	var metaLogin bool
 	var qoderLogin bool
+	var opencodeLogin bool
 	var projectID string
 	var discoverGateways bool
 	var discoverTimeout int
@@ -261,6 +264,7 @@ func main() {
 	flag.BoolVar(&devinLogin, "devin-login", false, "Login to Devin using OAuth")
 	flag.BoolVar(&metaLogin, "meta-login", false, "Login to Meta using OAuth")
 	flag.BoolVar(&qoderLogin, "qoder-login", false, "Login to Qoder using Enterprise PAT or OAuth device flow")
+	flag.BoolVar(&opencodeLogin, "opencode-login", false, "Login to OpenCode using OAuth")
 	flag.StringVar(&projectID, "project_id", "", "Project ID (Gemini only, not required)")
 	flag.BoolVar(&discoverGateways, "discover", false, "Discover local AI gateways and CPA instances on the LAN")
 	flag.IntVar(&discoverTimeout, "discover-timeout", 3, "Timeout in seconds for LAN discovery (default 3s)")
@@ -800,6 +804,7 @@ func main() {
 		devinLogin:         devinLogin,
 		metaLogin:          metaLogin,
 		qoderLogin:         qoderLogin,
+		opencodeLogin:      opencodeLogin,
 	})
 	cloudConfigMissing := isCloudDeploy && !configFileExists
 	homeMode := configLoadedFromHome || (cfg != nil && cfg.Home.Enabled)
@@ -962,6 +967,12 @@ func main() {
 		cmd.DoMetaLogin(cfg, options)
 	} else if qoderLogin {
 		cmd.DoQoderLogin(cfg, options)
+	} else if opencodeLogin {
+		cmd.DoOpencodeLogin(cfg, options)
+	} else if xaiLogin {
+		cmd.DoXaiLogin(cfg, options)
+	} else if metaLogin {
+		cmd.DoMetaLogin(cfg, options)
 	} else {
 		// In cloud deploy mode without config file, just wait for shutdown signals
 		if isCloudDeploy && !configFileExists {
