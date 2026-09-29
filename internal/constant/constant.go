@@ -36,4 +36,7 @@ const (
 
 	// Interactions represents the Google Interactions API format identifier.
 	Interactions = "interactions"
+
+	// Opencode represents the Opencode AI provider identifier.
+	Opencode = "opencode"
 )

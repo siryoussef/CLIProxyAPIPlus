@@ -524,6 +524,8 @@ func GetStaticModelDefinitionsByChannel(channel string) []*ModelInfo {
 		return GetMetaModels()
 	case "qoder":
 		return GetQoderModels()
+	case "opencode":
+		return GetOpencodeModels()
 	default:
 		return nil
 	}
@@ -1105,3 +1107,5 @@ func GetAmazonQModels() []*ModelInfo {
 func GetQoderModels() []*ModelInfo {
 	return cloneModelInfos(getModels().Qoder)
 }
+
+
