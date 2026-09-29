@@ -970,7 +970,7 @@ func main() {
 	} else if opencodeLogin {
 		cmd.DoOpencodeLogin(cfg, options)
 	} else if xaiLogin {
-		cmd.DoXaiLogin(cfg, options)
+		cmd.DoXAILogin(cfg, options)
 	} else if metaLogin {
 		cmd.DoMetaLogin(cfg, options)
 	} else {
