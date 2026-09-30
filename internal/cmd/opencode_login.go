@@ -51,6 +51,18 @@ func DoOpencodeLogin(cfg *config.Config, options *LoginOptions) {
 		return
 	}
 
-	fmt.Printf("OpenCode Zen free tier configured. Credential saved to %s\n", filePath)
-	fmt.Println("No API key required. Use models like: big-pickle, deepseek-v4-flash-free, etc.")
+	fmt.Printf("OpenCode Zen free tier enabled. Marker file saved to %s\n", filePath)
+	fmt.Println()
+	fmt.Println("How this works:")
+	fmt.Println("  The OpenCode Zen endpoint (https://opencode.ai/zen/v1) is a public,")
+	fmt.Println("  anonymous free tier that requires NO account, NO API key, and NO login.")
+	fmt.Println("  Access is granted to requests that match the official OpenCode client shape:")
+	fmt.Println("    - Authorization: Bearer public")
+	fmt.Println("    - Canonical session ID (ses_<12 hex><14 base62>, SHA-256 derived)")
+	fmt.Println("    - x-opencode-{client,project,request,session} headers")
+	fmt.Println("    - stream: true + tools array containing: bash, edit, glob, grep, read")
+	fmt.Println("  CLIProxyAPI injects all of these automatically on every request.")
+	fmt.Println()
+	fmt.Println("Available free models: big-pickle, deepseek-v4-flash-free,")
+	fmt.Println("  minimax-m2.5-free, nemotron-3-super-free, qwen3.6-plus-free")
 }
