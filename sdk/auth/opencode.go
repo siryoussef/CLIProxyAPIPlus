@@ -21,12 +21,19 @@ func (a *OpencodeAuthenticator) Provider() string {
 	return "opencode"
 }
 
-// Login performs the login for OpenCode.
+// Login performs the login for OpenCode Zen free tier.
+// The Zen free tier is keyless (Authorization: Bearer public) — no OAuth
+// or API key is required. This login simply writes a marker credential file
+// so the executor can route requests to the Zen endpoint.
 func (a *OpencodeAuthenticator) Login(ctx context.Context, cfg *config.Config, opts *LoginOptions) (*auth.Auth, error) {
-	// For now, since OpenCode free tier is keyless or anonymous, we return a generic auth.
 	return &auth.Auth{
 		ID:       "opencode-default",
 		Provider: "opencode",
+		Metadata: map[string]any{
+			"type":     "opencode",
+			"provider": "opencode",
+			"tier":     "zen-free",
+		},
 	}, nil
 }
 

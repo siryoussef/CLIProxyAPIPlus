@@ -122,74 +122,74 @@ func (e *OpencodeExecutor) HttpRequest(ctx context.Context, auth *cliproxyauth.A
 	return httpClient.Do(httpReq)
 }
 
-// isFreeModel checks if the model name typically requires the free tier gate logic.
+// anonymousCoreTools are the tool names the OpenCode Zen free tier requires
+// to be present in every agent-shaped request. Requests missing any of these
+// names are rejected with 403 FreeTierError.
+// Source: https://github.com/jasonxu114514/opencode2api (gateway/upstream.go)
+var anonymousCoreTools = []string{"bash", "edit", "glob", "grep", "read"}
+
+// isFreeModel checks if the model is served by the Zen free tier
+// (no-auth "Bearer public" lane). All models on the Zen endpoint require the
+// agent-shaped gate, but -free suffix / big-pickle always land on the
+// anonymous lane which additionally enforces the tool gate.
 func isFreeModel(model string) bool {
 	lower := strings.ToLower(model)
 	return strings.HasSuffix(lower, "-free") || lower == "big-pickle"
 }
 
-// injectGateTools parses and injects the required tools for the free tier gate.
+// injectGateTools ensures the request body has stream:true and contains all
+// five anonymous core tools required by the OpenCode Zen free-tier gate.
+// Missing tools are synthesized with minimal definitions; existing tools and
+// all other body fields are preserved unchanged.
 func injectGateTools(payload []byte) ([]byte, error) {
 	var body map[string]interface{}
 	if err := json.Unmarshal(payload, &body); err != nil {
 		return payload, nil
 	}
-	
-	// OpenCode's free tier gate requires both "bash" and "read" tools to be present
-	tools, ok := body["tools"].([]interface{})
-	if !ok {
-		tools = []interface{}{}
-	}
-	
-	hasBash := false
-	hasRead := false
-	
+
+	// Free tier gate requires stream: true.
+	body["stream"] = true
+
+	tools, _ := body["tools"].([]interface{})
+
+	// Build a set of present tool names (handle both OpenAI and Anthropic shapes).
+	present := make(map[string]bool, len(tools))
 	for _, toolObj := range tools {
-		if tmap, isMap := toolObj.(map[string]interface{}); isMap {
-			if fobj, fok := tmap["function"].(map[string]interface{}); fok {
-				if name, nok := fobj["name"].(string); nok {
-					if name == "bash" {
-						hasBash = true
-					}
-					if name == "read" {
-						hasRead = true
-					}
-				}
+		tmap, ok := toolObj.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		// OpenAI chat-completions shape: tool.function.name
+		if fobj, ok := tmap["function"].(map[string]interface{}); ok {
+			if name, ok := fobj["name"].(string); ok && name != "" {
+				present[name] = true
 			}
 		}
+		// Anthropic shape: tool.name
+		if name, ok := tmap["name"].(string); ok && name != "" {
+			present[name] = true
+		}
 	}
-	
-	if !hasBash {
+
+	// Inject any missing core tools.
+	for _, name := range anonymousCoreTools {
+		if present[name] {
+			continue
+		}
 		tools = append(tools, map[string]interface{}{
 			"type": "function",
 			"function": map[string]interface{}{
-				"name": "bash",
-				"description": "Run bash command",
+				"name":        name,
+				"description": "Agent tool " + name,
 				"parameters": map[string]interface{}{
-					"type": "object",
+					"type":       "object",
 					"properties": map[string]interface{}{},
 				},
 			},
 		})
 	}
-	if !hasRead {
-		tools = append(tools, map[string]interface{}{
-			"type": "function",
-			"function": map[string]interface{}{
-				"name": "read",
-				"description": "Read file",
-				"parameters": map[string]interface{}{
-					"type": "object",
-					"properties": map[string]interface{}{},
-				},
-			},
-		})
-	}
-	
+
 	body["tools"] = tools
-	// Free tier gate requires stream to be true
-	body["stream"] = true
-	
 	return json.Marshal(body)
 }
 

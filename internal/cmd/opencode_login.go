@@ -1,48 +1,60 @@
 package cmd
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
-	sdkAuth "github.com/router-for-me/CLIProxyAPI/v7/sdk/auth"
 )
 
-// DoOpencodeLogin initiates the OpenCode login flow.
+// DoOpencodeLogin sets up credentials for the OpenCode Zen free tier.
+// The Zen free tier is keyless (Authorization: Bearer public) — no OAuth or
+// API key is needed. This command simply writes a marker credential file so
+// the server knows to route requests to the Zen anonymous lane.
 func DoOpencodeLogin(cfg *config.Config, options *LoginOptions) {
 	if options == nil {
 		options = &LoginOptions{}
 	}
 
-	manager := newAuthManager()
-
-	promptFn := options.Prompt
-	if promptFn == nil {
-		promptFn = func(prompt string) (string, error) {
-			fmt.Print(prompt)
-			var value string
-			fmt.Scanln(&value)
-			return strings.TrimSpace(value), nil
-		}
+	authDir := ""
+	if cfg != nil {
+		authDir = strings.TrimSpace(cfg.AuthDir)
 	}
-
-	authOpts := &sdkAuth.LoginOptions{
-		NoBrowser:    options.NoBrowser,
-		CallbackPort: options.CallbackPort,
-		Metadata:     map[string]string{},
-		Prompt:       promptFn,
-	}
-
-	_, savedPath, err := manager.Login(context.Background(), "opencode", cfg, authOpts)
-	if err != nil {
-		fmt.Printf("OpenCode authentication failed: %v\n", err)
+	if authDir == "" {
+		fmt.Println("OpenCode: no auth directory configured; skipping credential file write.")
+		fmt.Println("OpenCode Zen free tier is ready — no API key required.")
 		return
 	}
 
-	if savedPath != "" {
-		fmt.Printf("Authentication saved to %s\n", savedPath)
-	} else {
-		fmt.Println("Authentication successful.")
+	if err := os.MkdirAll(authDir, 0700); err != nil {
+		fmt.Printf("OpenCode: failed to create auth directory: %v
+", err)
+		return
 	}
+
+	record := map[string]any{
+		"type":     "opencode",
+		"provider": "opencode",
+		"tier":     "zen-free",
+	}
+	data, err := json.MarshalIndent(record, "", "  ")
+	if err != nil {
+		fmt.Printf("OpenCode: failed to encode credential: %v
+", err)
+		return
+	}
+
+	filePath := filepath.Join(authDir, "opencode-default.json")
+	if err := os.WriteFile(filePath, data, 0600); err != nil {
+		fmt.Printf("OpenCode: failed to write credential file: %v
+", err)
+		return
+	}
+
+	fmt.Printf("OpenCode Zen free tier configured. Credential saved to %s
+", filePath)
+	fmt.Println("No API key required. Use models like: big-pickle, deepseek-v4-flash-free, etc.")
 }
