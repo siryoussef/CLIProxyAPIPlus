@@ -117,29 +117,39 @@ func tryRefreshModels(ctx context.Context, label string) {
 	oldData := getModels()
 
 	parsed, url := fetchModelsFromRemote(ctx)
+	var changed []string
 	if parsed == nil {
 		log.Warnf("%s: fetch failed from all URLs, keeping current data", label)
-		return
+	} else {
+		if len(parsed.Meta) == 0 && oldData != nil && len(oldData.Meta) > 0 {
+			parsed.Meta = oldData.Meta
+		}
+
+		changed = detectChangedProviders(oldData, parsed)
+
+		modelsCatalogStore.mu.Lock()
+		modelsCatalogStore.data = parsed
+		modelsCatalogStore.mu.Unlock()
 	}
 
-	if len(parsed.Meta) == 0 && oldData != nil && len(oldData.Meta) > 0 {
-		parsed.Meta = oldData.Meta
+	if opencodeModels, err := fetchOpencodeModels(ctx); err != nil {
+		log.Warnf("%s: failed to refresh OpenCode Zen models, keeping current data: %v", label, err)
+	} else if updateOpencodeModels(opencodeModels) {
+		changed = append(changed, "opencode")
 	}
-
-	// Detect changes before updating store.
-	changed := detectChangedProviders(oldData, parsed)
-
-	// Update store with new data regardless.
-	modelsCatalogStore.mu.Lock()
-	modelsCatalogStore.data = parsed
-	modelsCatalogStore.mu.Unlock()
 
 	if len(changed) == 0 {
-		log.Infof("%s completed from %s, no changes detected", label, url)
+		if parsed != nil {
+			log.Infof("%s completed from %s, no changes detected", label, url)
+		}
 		return
 	}
 
-	log.Infof("%s completed from %s, changes detected for providers: %v", label, url, changed)
+	if parsed != nil {
+		log.Infof("%s completed from %s, changes detected for providers: %v", label, url, changed)
+	} else {
+		log.Infof("%s completed with changes detected for providers: %v", label, changed)
+	}
 	notifyModelRefresh(changed)
 }
 

@@ -63,6 +63,5 @@ func DoOpencodeLogin(cfg *config.Config, options *LoginOptions) {
 	fmt.Println("    - stream: true + tools array containing: bash, edit, glob, grep, read")
 	fmt.Println("  CLIProxyAPI injects all of these automatically on every request.")
 	fmt.Println()
-	fmt.Println("Available free models: big-pickle, deepseek-v4-flash-free,")
-	fmt.Println("  minimax-m2.5-free, nemotron-3-super-free, qwen3.6-plus-free")
+	fmt.Println("Available free chat models are discovered from OpenCode Zen's live catalog.")
 }
